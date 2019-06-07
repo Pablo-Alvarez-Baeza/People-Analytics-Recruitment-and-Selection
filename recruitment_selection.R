@@ -53,8 +53,9 @@ accept_yn <- factor(AcceptNY,
                  labels = c("Declined", "Accepted"))
   
 join_yn <- factor(JoinYN,
-  levels = 0:1,
-  labels = c("Not joined", "Joined"))
+                  levels = 0:1,
+                  labels = c("Not joined", "Joined"))
+  
 
 applicants_df <- data.frame(gender_mf, bame_yn, shortlisted_ny, interviewed_ny, femaleonpanel, 
                             offer_ny, accept_yn, join_yn)
@@ -65,18 +66,23 @@ applicants_df <- data.frame(gender_mf, bame_yn, shortlisted_ny, interviewed_ny, 
 
 # -- Patterns of Gender and BAME in the applicant pool --
 
-applicants_df$gender_freq <- table(gender_mf)
+gender_freq <- table(gender_mf)
 gender_freq
-applicants_df$gender_perc <- prop.table(gender_freq) %>% round(2)
+gender_perc <- prop.table(gender_freq) %>% round(2)
+gender_perc
 
 # Waffle tutorial
 # https://github.com/hrbrmstr/waffle
-waffle(gender_freq, rows = 10, use_glyph = "male", glyph_size = 6,
-       title = "Gender of applicants")
+waffle(gender_freq, rows = 10, use_glyph = "male", glyph_size = 5,
+       title = "Applicants Gender")
 
-applicants_df$bame_freq <- table(bame_yn)
+bame_freq <- table(bame_yn)
 bame_freq
-applicants_df$bame_perc <- prop.table(bame_freq) %>% round(2)
+bame_perc <- prop.table(bame_freq) %>% round(2)
+bame_perc
+
+waffle(bame_freq, rows = 10, use_glyph = "male", glyph_size = 5,
+       title = "Applicants BAME")
 
 gender_by_bame <- table(gender_mf, bame_yn)
 gender_by_bame
@@ -98,3 +104,46 @@ ggplot(applicants_df, aes(gender_mf)) +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
   facet_wrap(~ bame_yn)
  
+
+# -- Patterns of Shortlisted by Gender -- #
+shortlisted_ny_freq <- table(shortlisted_ny)
+shortlisted_ny_freq 
+shortlisted_ny_perc <- prop.table(shortlisted_ny_freq) %>% round(2)
+shortlisted_ny_perc
+
+shortl_by_gender <- table(gender_mf, shortlisted_ny)
+shortl_by_gender
+prop.table(shortl_by_gender, 1) %>% round(1)
+prop.table(shortl_by_gender, 2) %>% round(2)
+
+ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
+  scale_fill_discrete(name = "Shortlisted") +
+  geom_bar(position = "dodge") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
+  scale_fill_discrete(name = "Shortlisted") +
+  geom_bar(position = "fill") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+ggplot(applicants_df, aes(shortlisted_ny)) +
+  geom_bar() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+  facet_wrap(~ gender_mf)
+
+# -- Patterns of Shortlisted by BAME -- #
+shortl_by_bame <- table(bame_yn, shortlisted_ny)
+shortl_by_bame
+prop.table(shortl_by_bame, 1) %>% round(2)
+prop.table(shortl_by_bame, 2) %>% round(2)
+
+ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
+  geom_bar(position = "fill") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) 
+
+ggplot(applicants_df, aes(shortlisted_ny)) +
+  geom_bar() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+  facet_wrap(~bame_yn)
+
+  
