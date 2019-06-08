@@ -1,5 +1,5 @@
 library(tidyverse)
-library(psyinch)
+library(psych)
 library(multilevel)
 library(waffle)
 # install.packages("extrafontdb", repos = "http://cran.rstudio.com/")
@@ -8,8 +8,8 @@ library(waffle)
 # Check icons here 
 # https://fontawesome.com/icons?from=io
 library(extrafont)
+# font_import()
 
-font_import()
 fonts() [grep("Awesome", fonts())]
 loadfonts(device = "win")
 
@@ -70,6 +70,9 @@ gender_freq <- table(gender_mf)
 gender_freq
 gender_perc <- prop.table(gender_freq) %>% round(2)
 gender_perc
+gender_results <- cbind(gender_freq, gender_perc) 
+colnames(gender_results) <- paste(c("Total", "%")) 
+gender_results
 
 # Waffle tutorial
 # https://github.com/hrbrmstr/waffle
@@ -80,6 +83,9 @@ bame_freq <- table(bame_yn)
 bame_freq
 bame_perc <- prop.table(bame_freq) %>% round(2)
 bame_perc
+bame_results <- cbind(bame_freq, bame_perc) 
+colnames(bame_results) <- paste(c("Total", "%"))
+bame_results
 
 waffle(bame_freq, rows = 10, use_glyph = "male", glyph_size = 5,
        title = "Applicants BAME")
@@ -107,9 +113,10 @@ ggplot(applicants_df, aes(gender_mf)) +
 
 # -- Patterns of Shortlisted by Gender -- #
 shortlisted_ny_freq <- table(shortlisted_ny)
-shortlisted_ny_freq 
 shortlisted_ny_perc <- prop.table(shortlisted_ny_freq) %>% round(2)
-shortlisted_ny_perc
+shortlisted_results <- cbind(shortlisted_ny_freq, shortlisted_ny_perc)
+colnames(shortlisted_results) <- paste(c("Total", "%"))
+shortlisted_results
 
 shortl_by_gender <- table(gender_mf, shortlisted_ny)
 shortl_by_gender
@@ -131,6 +138,9 @@ ggplot(applicants_df, aes(shortlisted_ny)) +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
   facet_wrap(~ gender_mf)
 
+chisq <- chisq.test(gender_mf, shortlisted_ny)
+chisq
+
 # -- Patterns of Shortlisted by BAME -- #
 shortl_by_bame <- table(bame_yn, shortlisted_ny)
 shortl_by_bame
@@ -141,9 +151,16 @@ ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
   geom_bar(position = "fill") +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) 
 
+ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
+  geom_bar(position = "dodge") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
 ggplot(applicants_df, aes(shortlisted_ny)) +
   geom_bar() +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
   facet_wrap(~bame_yn)
 
-  
+chisq <- chisq.test(bame_yn, shortlisted_ny)
+chisq
+
+
