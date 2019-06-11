@@ -40,7 +40,7 @@ interviewed_ny <- factor(Interviewed,
                       levels = 0:1,
                       labels = c("Not", "Yes"))
                       
-femaleonpanel <- factor(FemaleONpanel,
+female_on_panel <- factor(FemaleONpanel,
                         levels = 1:2,
                         labels = c("No", "Yes"))
 
@@ -61,15 +61,14 @@ applicants_df <- data.frame(gender_mf, bame_yn, shortlisted_ny, interviewed_ny, 
                             offer_ny, accept_yn, join_yn)
 
 
-# ----- Exploratory Data Analysis ----- #
-
+# ----- Example 1: ----- #
+# Consistency of gender and BAME proportions in the applicant pool #
 
 # -- Patterns of Gender and BAME in the applicant pool --
 
+# Gender
 gender_freq <- table(gender_mf)
-gender_freq
 gender_perc <- prop.table(gender_freq) %>% round(2)
-gender_perc
 gender_results <- cbind(gender_freq, gender_perc) 
 colnames(gender_results) <- paste(c("Total", "%")) 
 gender_results
@@ -79,16 +78,91 @@ gender_results
 waffle(gender_freq, rows = 10, use_glyph = "male", glyph_size = 5,
        title = "Applicants Gender")
 
+# BAME
 bame_freq <- table(bame_yn)
-bame_freq
 bame_perc <- prop.table(bame_freq) %>% round(2)
-bame_perc
 bame_results <- cbind(bame_freq, bame_perc) 
 colnames(bame_results) <- paste(c("Total", "%"))
 bame_results
 
 waffle(bame_freq, rows = 10, use_glyph = "male", glyph_size = 5,
        title = "Applicants BAME")
+
+# Shortlisted
+shortlisted_ny_freq <- table(shortlisted_ny)
+shortlisted_ny_perc <- prop.table(shortlisted_ny_freq) %>% round(2)
+shortlisted_results <- cbind(shortlisted_ny_freq, shortlisted_ny_perc)
+colnames(shortlisted_results) <- paste(c("Total", "%"))
+shortlisted_results
+
+# Interviewed
+interviewed_freq <- table(interviewed_ny)
+interviewed_perc <- prop.table(interviewed_freq) %>% round(2)
+interviewed_results <- cbind(interviewed_freq, interviewed_perc) 
+colnames(interviewed_results) <- paste(c("Total", "%"))
+interviewed_results
+
+# Female member on the interview panel
+female_on_panel_freq <- table(female_on_panel)
+female_on_panel_perc <- prop.table(female_on_panel_freq) %>% round(2)
+female_on_panel_results <- cbind(female_on_panel_freq, female_on_panel_perc)
+colnames(female_on_panel_results) <- paste(c("Total", "%"))
+female_on_panel_results
+
+# Made an offer?
+offer_ny_freq <- table(offer_ny)
+offer_ny_perc <- prop.table(offer_ny_freq) %>% round(2)
+offer_ny_results <- cbind(offer_ny_freq, offer_ny_perc)
+colnames(offer_ny_results) <- paste(c("Total", "%"))
+offer_ny_results
+
+# Accepted offer?
+accept_yn_freq <- table(accept_yn)
+accept_yn_perc <- prop.table(accept_yn_freq) %>% round(2)
+accept_yn_results <- cbind(accept_yn_freq, accept_yn_perc)
+colnames(accept_yn_results) <- paste(c("Total", "%"))
+accept_yn_results
+
+# Joined or not
+join_yn_freq <- table(join_yn)
+join_yn_perc <- prop.table(join_yn_freq) %>% round(2)
+join_yn_results <- cbind(join_yn_freq, join_yn_perc) 
+colnames(join_yn_results) <- paste(c("Total", "%"))
+join_yn_results
+
+
+# ----- Example 2 ----- #
+# Investigating the influence of gender and BAME on shortlisting and offers made
+
+shortl_by_gender <- table(gender_mf, shortlisted_ny)
+shortl_by_gender
+prop.table(shortl_by_gender) %>% round(2)
+prop.table(shortl_by_gender, 1) %>% round(2)
+prop.table(shortl_by_gender, 2) %>% round(2)
+
+ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
+  scale_fill_discrete(name = "Shortlisted") +
+  geom_bar(position = "dodge") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
+  scale_fill_discrete(name = "Shortlisted") +
+  geom_bar(position = "fill") +
+  geom_hline(yintercept = .5, linetype = "dashed") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
+  geom_bar() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+  facet_wrap(~ gender_mf) 
+  
+
+chisq <- chisq.test(gender_mf, shortlisted_ny)
+chisq # p < .001*** X2 = 13.905
+
+
+
+
 
 gender_by_bame <- table(gender_mf, bame_yn)
 gender_by_bame
@@ -112,34 +186,8 @@ ggplot(applicants_df, aes(gender_mf)) +
  
 
 # -- Patterns of Shortlisted by Gender -- #
-shortlisted_ny_freq <- table(shortlisted_ny)
-shortlisted_ny_perc <- prop.table(shortlisted_ny_freq) %>% round(2)
-shortlisted_results <- cbind(shortlisted_ny_freq, shortlisted_ny_perc)
-colnames(shortlisted_results) <- paste(c("Total", "%"))
-shortlisted_results
 
-shortl_by_gender <- table(gender_mf, shortlisted_ny)
-shortl_by_gender
-prop.table(shortl_by_gender, 1) %>% round(1)
-prop.table(shortl_by_gender, 2) %>% round(2)
 
-ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
-  scale_fill_discrete(name = "Shortlisted") +
-  geom_bar(position = "dodge") +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
-
-ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
-  scale_fill_discrete(name = "Shortlisted") +
-  geom_bar(position = "fill") +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
-
-ggplot(applicants_df, aes(shortlisted_ny)) +
-  geom_bar() +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
-  facet_wrap(~ gender_mf)
-
-chisq <- chisq.test(gender_mf, shortlisted_ny)
-chisq
 
 # -- Patterns of Shortlisted by BAME -- #
 shortl_by_bame <- table(bame_yn, shortlisted_ny)
@@ -163,4 +211,15 @@ ggplot(applicants_df, aes(shortlisted_ny)) +
 chisq <- chisq.test(bame_yn, shortlisted_ny)
 chisq
 
+# Decision tree Gender - Shortlisted
+shuffle_index <- sample(1:nrow(applicants_file))
+head(shuffle_index)
+applicants_df <- applicants_df[shuffle_index, ] %>% drop_na
+applicants_df
 
+# Train/test set
+
+# install.packages("rpart.plot")
+library(rpart.plot)
+
+ 
