@@ -1,5 +1,6 @@
 library(tidyverse)
 library(psych)
+library(questionr)
 library(multilevel)
 library(waffle)
 # install.packages("extrafontdb", repos = "http://cran.rstudio.com/")
@@ -57,7 +58,7 @@ join_yn <- factor(JoinYN,
                   labels = c("Not joined", "Joined"))
   
 
-applicants_df <- data.frame(gender_mf, bame_yn, shortlisted_ny, interviewed_ny, femaleonpanel, 
+applicants_df <- data.frame(gender_mf, bame_yn, shortlisted_ny, interviewed_ny, female_on_panel, 
                             offer_ny, accept_yn, join_yn)
 
 
@@ -140,29 +141,57 @@ prop.table(shortl_by_gender) %>% round(2)
 prop.table(shortl_by_gender, 1) %>% round(2)
 prop.table(shortl_by_gender, 2) %>% round(2)
 
+# Frequency plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
   scale_fill_discrete(name = "Shortlisted") +
   geom_bar(position = "dodge") +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
 
+# Percentage plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
   scale_fill_discrete(name = "Shortlisted") +
   geom_bar(position = "fill") +
   geom_hline(yintercept = .5, linetype = "dashed") +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
 
+# Frequency plot with facet_wrap
 ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
   geom_bar() +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
   facet_wrap(~ gender_mf) 
   
 
-chisq <- chisq.test(gender_mf, shortlisted_ny)
-chisq # p < .001*** X2 = 13.905
+# Chi-square test
+# Checking assumptions
+# > Independence? Yes, the sample refers to people who
+# are either male / female and whether they have been rejected / shortlisted
 
 
+chisq <- chisq.test(gender_mf, shortlisted_ny, correct = F)
+chisq #  X2 = 14.997, p < .001***
+# > Expected frequencies > 5? Yes smallest expected count is 24.51
 
+# Checkin individual residuals (z-scores)
+# Values liying outside +- 1.96 are significant at p < .05
+# Values lying outside +- 2.58 are significant at p < .01
+# Values lying outside +- 3.29 are significant at p < .001
+chisq$residuals %>% round(2) 
+# Male rejected = -1.84 ; NOT significant
+# Male shortlisted = 2.72 ; p < .01
+# Female rejected = 1.15 ; NOT significant
+# Female shortlisted = -1.69 ; NOT significant
 
+# Calculating effect size  - odds ratio
+shortl_by_gender_or <-  odds.ratio(shortl_by_gender)
+shortl_by_gender_or$OR %>% round(2) 
+
+# Conclusion: The highly significant result indicates that there was a 
+# significant association between an applicants' gender and whether they were
+# shortlisted or not X2 (1) = 14.997, p < .001***.
+# From the standardized residuals the cell 'males shortlisted' was the only
+# significant one contributing to the differences in applicants being shortlisted.
+# The odds ratio showed that the odds of applicants being shortlisted were .35 times
+# higher if they were males than if they were females.
 
 gender_by_bame <- table(gender_mf, bame_yn)
 gender_by_bame
