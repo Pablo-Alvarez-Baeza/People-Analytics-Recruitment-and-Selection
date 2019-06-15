@@ -60,12 +60,10 @@ join_yn <- factor(JoinYN,
 
 applicants_df <- data.frame(gender_mf, bame_yn, shortlisted_ny, interviewed_ny, female_on_panel, 
                             offer_ny, accept_yn, join_yn)
-
+applicants_df %>% glimpse
 
 # ----- Example 1: ----- #
 # Consistency of gender and BAME proportions in the applicant pool #
-
-# -- Patterns of Gender and BAME in the applicant pool --
 
 # Gender
 gender_freq <- table(gender_mf)
@@ -76,7 +74,7 @@ gender_results
 
 # Waffle tutorial
 # https://github.com/hrbrmstr/waffle
-waffle(gender_freq, rows = 10, use_glyph = "male", glyph_size = 5,
+gender_waffle <- waffle(gender_freq, rows = 10, use_glyph = "male", glyph_size = 4,
        title = "Applicants Gender")
 
 # BAME
@@ -86,7 +84,7 @@ bame_results <- cbind(bame_freq, bame_perc)
 colnames(bame_results) <- paste(c("Total", "%"))
 bame_results
 
-waffle(bame_freq, rows = 10, use_glyph = "male", glyph_size = 5,
+bame_waffle <- waffle(bame_freq, rows = 10, use_glyph = "male", glyph_size = 4,
        title = "Applicants BAME")
 
 # Shortlisted
@@ -135,6 +133,8 @@ join_yn_results
 # ----- Example 2 ----- #
 # Investigating the influence of gender and BAME on shortlisting and offers made
 
+# -- Gender -- #
+
 shortl_by_gender <- table(gender_mf, shortlisted_ny)
 shortl_by_gender
 prop.table(shortl_by_gender) %>% round(2)
@@ -143,13 +143,13 @@ prop.table(shortl_by_gender, 2) %>% round(2)
 
 # Frequency plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
-  scale_fill_discrete(name = "Shortlisted") +
+  scale_fill_discrete(name = "Gender") +
   geom_bar(position = "dodge") +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
 
 # Percentage plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
-  scale_fill_discrete(name = "Shortlisted") +
+  scale_fill_discrete(name = "Gender") +
   geom_bar(position = "fill") +
   geom_hline(yintercept = .5, linetype = "dashed") +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
@@ -157,6 +157,7 @@ ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
 # Frequency plot with facet_wrap
 ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
   geom_bar() +
+  scale_fill_discrete(name = "Gender") +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
   facet_wrap(~ gender_mf) 
   
@@ -166,18 +167,19 @@ ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
 # > Independence? Yes, the sample refers to people who
 # are either male / female and whether they have been rejected / shortlisted
 
-
 chisq <- chisq.test(gender_mf, shortlisted_ny, correct = F)
 chisq #  X2 = 14.997, p < .001***
-# > Expected frequencies > 5? Yes smallest expected count is 24.51
+# > Expected frequencies > 5? Yes, smallest = 24.51
 
 # Checkin individual residuals (z-scores)
-# Values liying outside +- 1.96 are significant at p < .05
-# Values lying outside +- 2.58 are significant at p < .01
-# Values lying outside +- 3.29 are significant at p < .001
+# Values liying outside +- 1.96 are significant at p < .05*
+# Values lying outside +- 2.58 are significant at p < .01**
+# Values lying outside +- 3.29 are significant at p < .001***
+
 chisq$residuals %>% round(2) 
+
 # Male rejected = -1.84 ; NOT significant
-# Male shortlisted = 2.72 ; p < .01
+# Male shortlisted = 2.72 ; p < .01**
 # Female rejected = 1.15 ; NOT significant
 # Female shortlisted = -1.69 ; NOT significant
 
@@ -186,12 +188,62 @@ shortl_by_gender_or <-  odds.ratio(shortl_by_gender)
 shortl_by_gender_or$OR %>% round(2) 
 
 # Conclusion: The highly significant result indicates that there was a 
-# significant association between an applicants' gender and whether they were
-# shortlisted or not X2 (1) = 14.997, p < .001***.
+# significant association between applicants' gender and applicants being shortlisted.
+# X2 (1) = 14.997, p < .001***.
 # From the standardized residuals the cell 'males shortlisted' was the only
 # significant one contributing to the differences in applicants being shortlisted.
-# The odds ratio showed that the odds of applicants being shortlisted were .35 times
+# The odds ratio shows that the odds of applicants being shortlisted were .35 times
 # higher if they were males than if they were females.
+
+
+# -- BAME -- #
+bame_results
+bame_waffle
+
+shortl_by_bame <- table(bame_yn, shortlisted_ny)
+shortl_by_bame
+prop.table(shortl_by_bame, 1) %>% round(2)
+prop.table(shortl_by_bame, 2) %>% round(2)
+
+# Frequency plot
+ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
+  scale_fill_discrete(name = "Applicants", labels = c("BAME", "not BAME")) +
+  geom_bar(position = "dodge") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) 
+
+# Percentage plot
+ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
+  scale_fill_discrete(name ="Applicants", labels = c("BAME", "not BAME")) +
+  geom_bar(position = "fill") +
+  geom_hline(yintercept = .5, linetype = "dashed") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+# Frequency plot with facet_wrap
+ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
+  geom_bar() +
+  scale_fill_discrete(name = "Applicants", labels = c("BAME", "not BAME")) + 
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+  facet_wrap(~bame_yn)
+
+# Chi-square test
+chisq <- chisq.test(bame_yn, shortlisted_ny, correct = F)
+chisq # X2 = 24.452(1), p < .001***
+#  Expected frequencies > 5? Yes, smallest = 38.03
+
+# Checkin individual residuals (z-scores)
+# Values liying outside +- 1.96 are significant at p < .05*
+# Values lying outside +- 2.58 are significant at p < .01**
+# Values lying outside +- 3.29 are significant at p < .001***
+
+chisq$residuals %>% round(2) 
+# BAME rejected = 2.09 ; p < .05*
+# BAME shortlisted = -3.09 ; p < .01**
+# Female rejected = 1.82 ; NOT significant
+# Female shortlisted = 2.69 ; p < .01**
+
+# Calculating effect size  - odds ratio
+shortl_by_bame_or <-  odds.ratio(shortl_by_bame)
+shortl_by_bame_or$OR %>% round(2) 
 
 gender_by_bame <- table(gender_mf, bame_yn)
 gender_by_bame
@@ -199,14 +251,25 @@ gender_by_bame
 prop.table(gender_by_bame, 1) %>% round(2)
 prop.table(gender_by_bame, 2) %>% round(2)
 
+# Frequency plot
 ggplot(applicants_df, aes(gender_mf, fill = bame_yn)) +
   scale_fill_discrete(name = "BAME") +
   geom_bar(position = "dodge") +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) 
 
-ggplot(applicants_df, aes(gender_mf, fill = bame_yn)) +
+# Percetange plot
+ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
+  scale_fill_discrete(name = "Shortlisted") +
   geom_bar(position = "fill") +
-  ylab("proportion") # doesnt work
+  geom_hline(yintercept = .5, linetype = "dashed") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
+  scale_fill_discrete(name = "Shortlisted", labels = c("BAME", "not BAME")) +
+  geom_bar(position = "fill") +
+  geom_hline(yintercept = .5, linetype = "dashed") +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
 
 ggplot(applicants_df, aes(gender_mf)) +
   geom_bar() + 
@@ -219,26 +282,7 @@ ggplot(applicants_df, aes(gender_mf)) +
 
 
 # -- Patterns of Shortlisted by BAME -- #
-shortl_by_bame <- table(bame_yn, shortlisted_ny)
-shortl_by_bame
-prop.table(shortl_by_bame, 1) %>% round(2)
-prop.table(shortl_by_bame, 2) %>% round(2)
 
-ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
-  geom_bar(position = "fill") +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) 
-
-ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
-  geom_bar(position = "dodge") +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
-
-ggplot(applicants_df, aes(shortlisted_ny)) +
-  geom_bar() +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
-  facet_wrap(~bame_yn)
-
-chisq <- chisq.test(bame_yn, shortlisted_ny)
-chisq
 
 # Decision tree Gender - Shortlisted
 shuffle_index <- sample(1:nrow(applicants_file))
