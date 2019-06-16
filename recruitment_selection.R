@@ -3,6 +3,11 @@ library(psych)
 library(questionr)
 library(multilevel)
 library(waffle)
+library(gmodels)
+library(MASS)
+library(ca)
+library(factoextra)
+library(vcd)
 # install.packages("extrafontdb", repos = "http://cran.rstudio.com/")
 # tutorial to install FontAwesome 
 # https://nsaunders.wordpress.com/2017/09/08/infographic-style-charts-using-the-r-waffle-package/
@@ -137,9 +142,21 @@ join_yn_results
 
 shortl_by_gender <- table(gender_mf, shortlisted_ny)
 shortl_by_gender
+
+margin.table(shortl_by_gender, 1)
+margin.table(shortl_by_gender, 2)
 prop.table(shortl_by_gender) %>% round(2)
 prop.table(shortl_by_gender, 1) %>% round(2)
 prop.table(shortl_by_gender, 2) %>% round(2)
+CrossTable(gender_mf, shortlisted_ny, prop.r = T, prop.c = T, prop.t = T,
+           expected = T, sresid = T, format = "SPSS")
+
+# Mosaic plot
+# References
+# https://github.com/jtr13/codehelp/blob/master/R/mosaic.md
+# https://www.statmethods.net/advgraphs/mosaic.html
+
+mosaic(shortl_by_gender, shade = T, abbreviate_labs = 1)
 
 # Frequency plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
@@ -201,9 +218,16 @@ bame_results
 bame_waffle
 
 shortl_by_bame <- table(bame_yn, shortlisted_ny)
-shortl_by_bame
+prop.table(shortl_by_bame) %>% round(2)
 prop.table(shortl_by_bame, 1) %>% round(2)
 prop.table(shortl_by_bame, 2) %>% round(2)
+CrossTable(bame_yn, shortlisted_ny, digits = 2, prop.r = T, prop.c = T, prop.t = T,
+           expected = T, sresid = TRUE, format = "SPSS")
+
+# Mosaic plot
+mosaic(shortl_by_bame, shade = T, abbreviate_labs = 1)
+# It could abbreviate different labels like this 
+# mosaic(shortl_by_bame, shade = T, abbreviate_labs = c(1, 3))
 
 # Frequency plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
@@ -228,7 +252,7 @@ ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
 # Chi-square test
 chisq <- chisq.test(bame_yn, shortlisted_ny, correct = F)
 chisq # X2 = 24.452(1), p < .001***
-#  Expected frequencies > 5? Yes, smallest = 38.03
+chisq$expected %>% round(2) #  Expected frequencies > 5? Yes, smallest = 38.03
 
 # Checkin individual residuals (z-scores)
 # Values liying outside +- 1.96 are significant at p < .05*
@@ -245,44 +269,100 @@ chisq$residuals %>% round(2)
 shortl_by_bame_or <-  odds.ratio(shortl_by_bame)
 shortl_by_bame_or$OR %>% round(2) 
 
+woolf_test(shortl_by_gender)
+
+# Reference fourfold graph: http://datavis.ca/papers/4fold/4fold.pdf
+fourfold(shortl_by_bame)
 gender_by_bame <- table(gender_mf, bame_yn)
 gender_by_bame
+
+cotabplot(shortl_by_bame)
 
 prop.table(gender_by_bame, 1) %>% round(2)
 prop.table(gender_by_bame, 2) %>% round(2)
 
-# Frequency plot
-ggplot(applicants_df, aes(gender_mf, fill = bame_yn)) +
-  scale_fill_discrete(name = "BAME") +
-  geom_bar(position = "dodge") +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) 
 
-# Percetange plot
-ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
-  scale_fill_discrete(name = "Shortlisted") +
-  geom_bar(position = "fill") +
-  geom_hline(yintercept = .5, linetype = "dashed") +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+# -- Combining Gender and BAME in predicting shortlisting -- #
 
-ggplot(applicants_df, aes(shortlisted_ny, fill = gender_mf)) +
-  scale_fill_discrete(name = "Shortlisted", labels = c("BAME", "not BAME")) +
-  geom_bar(position = "fill") +
-  geom_hline(yintercept = .5, linetype = "dashed") +
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+# Contingency tables
+CrossTable(gender_mf, shortlisted_ny, prop.r = T, prop.c = T, prop.t = T,
+           expected = T, sresid = T, format = "SPSS")
+CrossTable(bame_yn, shortlisted_ny, prop.r = T, prop.c = T, prop.t = T,
+           expected = T, sresid = T, format = "SPSS")
+# No expected counts less than 1, and no more than 20% less than 5. Ok
 
+# Mosaic plot
+mosaic(~ shortlisted_ny)
+mosaic(bame_yn ~ shortlisted_ny)
+mosaic(gender_mf ~ bame_yn + shortlisted_ny, abbreviate_labs = 1)
 
-ggplot(applicants_df, aes(gender_mf)) +
-  geom_bar() + 
-  theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
-  facet_wrap(~ bame_yn)
- 
+# Loglinear analysis
+# Reference: https://www.statmethods.net/stats/frequencies.html
 
-# -- Patterns of Shortlisted by Gender -- #
+# 3 categorical variables = loglinear analysis
+# Gender (male/female) = (A)
+# BAME (yes/no) = (B)
+# Shortlisted (yes/no) = (C)
 
+gender <- gender_mf
+bame <- bame_yn
+shortlisted <- shortlisted_ny
+log_df <- data.frame(gender, bame, shortlisted)
+# We have threetwo way interactions (AB, AC, BC) and one three-way interaction (ABC)
 
+# ln(outcome_ijk) = b0 + b1Ai + b2Bj + b3Ck + b4ABij + b5ACjk + b6BCjk + b7ABCijk + ln(Eij)
 
-# -- Patterns of Shortlisted by BAME -- #
+my_table <- table(gender, bame, shortlisted)
+my_table
+my_table <- xtabs(~ gender + bame + shortlisted, data = log_df) 
+my_table
+ftable(my_table)
 
+saturated_model <- loglm(~ gender*bame*shortlisted, data = my_table)
+saturated_model # perfect fir of the data
+step(saturated_model, direction = "backward")
+best_model <- loglm(formula = ~ A + B + C + A:C + B:C, data = my_table, evaluate = FALSE)
+
+saturated_model <- loglm(~ gender*bame*shortlisted, data = my_table)
+saturated_model # perfect fit of the data
+
+three_way_removed <- update(saturated_model, .~. - gender:bame:shortlisted)
+summary(three_way_removed)
+
+anova(saturated_model, three_way_removed)
+
+bame_shortlisted <- update(three_way_removed, .~. -bame:shortlisted)
+gender_shortlisted <- update(three_way_removed, .~. -gender:shortlisted)
+gender_bame <- update(three_way_removed, .~. -gender:bame)
+
+anova(three_way_removed, bame_shortlisted)
+# Delta = 27.5(1); p = .00 NOT removed
+
+anova(three_way_removed, gender_shortlisted)
+# Delta = 16.22(); p = .00 NOT removed
+
+anova(three_way_removed, gender_bame)
+# Delta = 1.79(1); p = .18
+two_way_assoc <- loglm(formula = ~ A*B + A*C + B*C, data = my_table)
+two_way_assoc
+
+conditional_independence_2 <- loglm(formula = ~ (A+B) * C, data = my_table)
+conditional_independence_2
+
+joint_independence_3 <- loglm(formula = ~ A*B + C, data = my_table)
+joint_independence_3
+
+mutual_independence_1 <- loglm(formula = ~ A + B + C, data = my_table)
+mutual_independence_1
+
+anova(mutual_independence_1, conditional_independence_2, joint_independence_3)
+# Model 1 = A + B + C
+# Model 2 = (A+B) * C
+# Model 3 = A * B + C
+
+plot(best_model)
+library(ca)
+a <- ca(HairEye)
 
 # Decision tree Gender - Shortlisted
 shuffle_index <- sample(1:nrow(applicants_file))
