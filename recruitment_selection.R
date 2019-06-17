@@ -225,9 +225,23 @@ CrossTable(bame_yn, shortlisted_ny, digits = 2, prop.r = T, prop.c = T, prop.t =
            expected = T, sresid = TRUE, format = "SPSS")
 
 # Mosaic plot
-mosaic(shortl_by_bame, shade = T, abbreviate_labs = 1)
+mosaic(shortl_by_bame, shade = TRUE, abbreviate_labs = 1,
+       labeling_args = list(set_varnames = c(bame_yn = "BAME", shortlisted_ny = "SHORTLISTED"))) # actual
+
+# Adding observed frequencies
+tab <- ifelse(shortl_by_bame < 5, NA, shortl)
+
+mosaic(shortl_by_bame, type = "expected", 
+       labeling_args = list(set_varnames = c(bame_yn = "BAME", shortlisted_ny = "SHORTLISTED"))) # expected
+                                              
+
+
+fill_colors <- matrix(c("dark cyan", "gray", "gray", "dark magenta"), ncol = 2)
+mosaic(shortl_by_bame, gp =gpar(fill = fill_colors, col = 0))
+
 # It could abbreviate different labels like this 
 # mosaic(shortl_by_bame, shade = T, abbreviate_labs = c(1, 3))
+
 
 # Frequency plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
@@ -275,8 +289,6 @@ woolf_test(shortl_by_gender)
 fourfold(shortl_by_bame)
 gender_by_bame <- table(gender_mf, bame_yn)
 gender_by_bame
-
-cotabplot(shortl_by_bame)
 
 prop.table(gender_by_bame, 1) %>% round(2)
 prop.table(gender_by_bame, 2) %>% round(2)
@@ -330,35 +342,39 @@ three_way_removed <- update(saturated_model, .~. - gender:bame:shortlisted)
 summary(three_way_removed)
 
 anova(saturated_model, three_way_removed)
+# three_way_removed = OK. Let's remove it and move on with two-way orders
 
 bame_shortlisted <- update(three_way_removed, .~. -bame:shortlisted)
 gender_shortlisted <- update(three_way_removed, .~. -gender:shortlisted)
 gender_bame <- update(three_way_removed, .~. -gender:bame)
 
 anova(three_way_removed, bame_shortlisted)
-# Delta = 27.5(1); p = .00 NOT removed
+# Delta = 27.5(1); p = .00 DONT remove
 
 anova(three_way_removed, gender_shortlisted)
-# Delta = 16.22(); p = .00 NOT removed
+# Delta = 16.22(); p = .00 DONT remove
 
 anova(three_way_removed, gender_bame)
-# Delta = 1.79(1); p = .18
-two_way_assoc <- loglm(formula = ~ A*B + A*C + B*C, data = my_table)
-two_way_assoc
+# Delta = 1.79(1); p = .18 DO Remove
 
-conditional_independence_2 <- loglm(formula = ~ (A+B) * C, data = my_table)
-conditional_independence_2
+chisq.test(gender_mf, bame_yn, correct = FALSE) # No association
+chisq.test(bame_yn, shortlisted_ny, correct = FALSE) # Association
 
-joint_independence_3 <- loglm(formula = ~ A*B + C, data = my_table)
-joint_independence_3
+final_model <- loglm(~ gender + bame + shortlisted + gender:shortlisted + bame:shortlisted, data = my_table)
+final_model
+mosaic(final_model)
 
-mutual_independence_1 <- loglm(formula = ~ A + B + C, data = my_table)
-mutual_independence_1
+male_only <- subset(log_df, gender == "Male")
+female_only <- subset(log_df, gender == "Female")
 
-anova(mutual_independence_1, conditional_independence_2, joint_independence_3)
-# Model 1 = A + B + C
-# Model 2 = (A+B) * C
-# Model 3 = A * B + C
+CrossTable(male_only$bame, male_only$shortlisted, chisq =TRUE, 
+           sresid =TRUE, format ="SPSS")
+
+CrossTable(female_only$bame, female_only$shortlisted, chisq =TRUE, 
+           sresid =TRUE, format ="SPSS")
+
+
+
 
 plot(best_model)
 library(ca)
