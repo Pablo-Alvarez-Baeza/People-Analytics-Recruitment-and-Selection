@@ -8,12 +8,16 @@ library(MASS)
 library(ca)
 library(factoextra)
 library(vcd)
+library(rpart.plot)
+library(rattle)
+library(RColorBrewer)
 # install.packages("extrafontdb", repos = "http://cran.rstudio.com/")
 # tutorial to install FontAwesome 
 # https://nsaunders.wordpress.com/2017/09/08/infographic-style-charts-using-the-r-waffle-package/
 # Check icons here 
 # https://fontawesome.com/icons?from=io
 library(extrafont)
+library(rpart)
 # font_import()
 
 fonts() [grep("Awesome", fonts())]
@@ -27,7 +31,6 @@ attach(applicants_file)
 glimpse(applicants_file)
 summary(applicants_file)
 names(applicants_file)
-fix(applicants_file)
 
 # Coding dummy variables
 gender_mf <- factor(Gender,
@@ -89,7 +92,7 @@ bame_results <- cbind(bame_freq, bame_perc)
 colnames(bame_results) <- paste(c("Total", "%"))
 bame_results
 
-bame_waffle <- waffle(bame_freq, rows = 10, use_glyph = "male", glyph_size = 4,
+bame_waffle <- waffle(bame_freq, rows = 14, use_glyph = "male", glyph_size = 4,
        title = "Applicants BAME")
 
 # Shortlisted
@@ -139,6 +142,8 @@ join_yn_results
 # Investigating the influence of gender and BAME on shortlisting and offers made
 
 # -- Gender -- #
+gender_results
+gender_waffle
 
 shortl_by_gender <- table(gender_mf, shortlisted_ny)
 shortl_by_gender
@@ -218,40 +223,37 @@ bame_results
 bame_waffle
 
 shortl_by_bame <- table(bame_yn, shortlisted_ny)
+shortl_by_bame
 prop.table(shortl_by_bame) %>% round(2)
 prop.table(shortl_by_bame, 1) %>% round(2)
 prop.table(shortl_by_bame, 2) %>% round(2)
 CrossTable(bame_yn, shortlisted_ny, digits = 2, prop.r = T, prop.c = T, prop.t = T,
-           expected = T, sresid = TRUE, format = "SPSS")
+           format = "SPSS")
 
+CrossTable(bame_yn, shortlisted_ny, digits = 2, prop.r = T, prop.c = T, prop.t = T,
+           expected = T, sresid = TRUE, format = "SPSS")
 # Mosaic plot
 mosaic(shortl_by_bame, shade = TRUE, abbreviate_labs = 1,
        labeling_args = list(set_varnames = c(bame_yn = "BAME", shortlisted_ny = "SHORTLISTED"))) # actual
 
 # Adding observed frequencies
-tab <- ifelse(shortl_by_bame < 5, NA, shortl)
-
 mosaic(shortl_by_bame, type = "expected", 
        labeling_args = list(set_varnames = c(bame_yn = "BAME", shortlisted_ny = "SHORTLISTED"))) # expected
-                                              
-
-
-fill_colors <- matrix(c("dark cyan", "gray", "gray", "dark magenta"), ncol = 2)
-mosaic(shortl_by_bame, gp =gpar(fill = fill_colors, col = 0))
-
+                                            
 # It could abbreviate different labels like this 
 # mosaic(shortl_by_bame, shade = T, abbreviate_labs = c(1, 3))
 
 
 # Frequency plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
-  scale_fill_discrete(name = "Applicants", labels = c("BAME", "not BAME")) +
+  scale_fill_discrete(name = "Applicants", labels = c("BAME", "non BAME")) +
   geom_bar(position = "dodge") +
+  coord_flip() +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) 
 
 # Percentage plot
 ggplot(applicants_df, aes(shortlisted_ny, fill = bame_yn)) +
-  scale_fill_discrete(name ="Applicants", labels = c("BAME", "not BAME")) +
+  scale_fill_discrete(name ="Applicants", labels = c("BAME", "non BAME")) +
   geom_bar(position = "fill") +
   geom_hline(yintercept = .5, linetype = "dashed") +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
@@ -296,7 +298,30 @@ prop.table(gender_by_bame, 2) %>% round(2)
 
 # -- Combining Gender and BAME in predicting shortlisting -- #
 
-# Contingency tables
+# Frequency table with Gender and BAMEyn using aggregate
+lut <- c("1" = "Male", "2" = "Female")
+Gender <- lut[Gender]
+lut <- c("1" = "BAME", "2" = "non-BAME")
+BAMEyn <- lut[BAMEyn]
+aggregate(ShortlistedNY ~ BAMEyn + Gender, FUN  = length) # Total number of applicants
+aggregate(ShortlistedNY ~ BAMEyn + Gender, FUN  = sum) # Number of applicants shortlisted
+
+# Proportion table with Gender and Bameyn 
+aggregate(ShortlistedNY ~ BAMEyn + Gender, FUN = function(x) {round(sum(x) / length(x), 2)}) 
+
+
+# Decision Tree
+fit <- rpart(ShortlistedNY ~ Gender + BAMEyn, method = "class")
+fancyRpartPlot(fit, sub = "")
+
+# .69% Applicants were rejected while .31 were shortlisted
+# If the applicant was BAME, move left, if it was non-BAME move right.
+# If an applicant was BAME, only .16 were shortlisted while, so the bucket votes that everyone
+# here (.43% of all the applicants were rejected)
+# If an aplicant was non-BAME, .43 were shortlisted while .57 were rejected.
+# If an applicant was female, 
+
+
 CrossTable(gender_mf, shortlisted_ny, prop.r = T, prop.c = T, prop.t = T,
            expected = T, sresid = T, format = "SPSS")
 CrossTable(bame_yn, shortlisted_ny, prop.r = T, prop.c = T, prop.t = T,
@@ -376,19 +401,5 @@ CrossTable(female_only$bame, female_only$shortlisted, chisq =TRUE,
 
 
 
-plot(best_model)
-library(ca)
-a <- ca(HairEye)
 
-# Decision tree Gender - Shortlisted
-shuffle_index <- sample(1:nrow(applicants_file))
-head(shuffle_index)
-applicants_df <- applicants_df[shuffle_index, ] %>% drop_na
-applicants_df
 
-# Train/test set
-
-# install.packages("rpart.plot")
-library(rpart.plot)
-
- 
